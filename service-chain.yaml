@@ -1,0 +1,45 @@
+tosca_definitions_version: tosca_simple_yaml_1_3
+description: Chaine de services réseau orchestrée avec xOpera.
+
+# ICI : On définit notre propre type pour éviter les erreurs "Missing requirements: host"
+node_types:
+  TP.DockerContainer:
+    derived_from: tosca.nodes.Root
+    requirements:
+      - dependency:
+          capability: tosca.capabilities.Node
+          relationship: tosca.relationships.DependsOn
+          occurrences: [0, UNBOUNDED]
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+
+topology_template:
+  node_templates:
+    Firewall:
+      type: TP.DockerContainer
+      interfaces:
+        Standard:
+          operations:
+            create:
+              implementation: playbooks/deploy_firewall.yaml
+
+    LoadBalancer:
+      type: TP.DockerContainer
+      requirements:
+        - dependency: Firewall
+      interfaces:
+        Standard:
+          operations:
+            create:
+              implementation: playbooks/deploy_loadbalancer.yaml
+
+    WebServer:
+      type: TP.DockerContainer
+      requirements:
+        - dependency: LoadBalancer
+      interfaces:
+        Standard:
+          operations:
+            create:
+              implementation: playbooks/deploy_webserver.yaml
